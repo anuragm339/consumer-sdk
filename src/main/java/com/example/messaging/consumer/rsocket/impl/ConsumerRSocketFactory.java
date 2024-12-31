@@ -4,7 +4,6 @@ import com.example.messaging.consumer.api.MessageConsumer;
 import com.example.messaging.consumer.connection.ConnectionManager;
 import com.example.messaging.consumer.core.ConsumerConfig;
 import com.example.messaging.consumer.core.DefaultMessageConsumer;
-import com.example.messaging.consumer.handler.DefaultMessageHandler;
 import com.example.messaging.consumer.handler.MessageHandler;
 import com.example.messaging.consumer.model.ConsumerSetupPayload;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -35,7 +34,6 @@ public class ConsumerRSocketFactory {
         this.objectMapper=objectMapper;
     }
     public MessageConsumer createConsumer(ConsumerConfig config) {
-        MessageHandler messageHandler = new DefaultMessageHandler(config.getConsumerId());
         ConnectionManager connectionManager = new ConnectionManager(config, messageHandler);
         // Create and return consumer instance
         return new DefaultMessageConsumer(connectionManager, config.getConsumerId());
