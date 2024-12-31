@@ -2,6 +2,7 @@ package com.example.messaging.consumer.rsocket.impl;
 
 import com.example.messaging.consumer.handler.MessageHandler;
 import com.example.messaging.models.Message;
+import com.example.messaging.models.MessageState;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.rsocket.Payload;
@@ -82,10 +83,11 @@ public class ConsumerRSocketImpl implements RSocket {
             JsonNode messageNode = root.get("message");
 
             return Message.builder()
-                    .msgOffset(messageNode.get("offset").asLong())
+                    .msgOffset(messageNode.get("msg_offset").asLong())
                     .type(messageNode.get("type").asText())
                     .data(Base64.getDecoder().decode(messageNode.get("data").asText()))
-                    .createdUtc(Instant.ofEpochMilli(messageNode.get("createdUtc").asLong()))
+                    .createdUtc(Instant.ofEpochMilli(messageNode.get("created_utc").asLong()))
+                    .state(MessageState.valueOf(messageNode.get("state").asText()))
                     .build();
 
         } catch (Exception e) {
