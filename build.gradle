@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.example.messaging'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+    implementation 'io.rsocket:rsocket-core:1.1.3'
+    implementation 'io.rsocket:rsocket-transport-netty:1.1.3'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation files('/Users/anuragmishra/Desktop/workspace/messaging/aqueduct-common/build/libs/aqueduct-common-1.0.0-SNAPSHOT.jar')
+
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -1,0 +1,54 @@
+classDiagram
+    class MessageConsumer {
+        <<interface>>
+        +consume() Flux~Message~
+        +acknowledge(messageId) Mono~Void~
+        +connect() Mono~Void~
+        +disconnect() Mono~Void~
+        +getStatus() ConsumerStatus
+    }
+
+    class DefaultMessageConsumer {
+        -connectionManager: ConnectionManager
+        -status: AtomicReference~ConsumerStatus~
+        -consumerId: String
+        +consume() Flux~Message~
+        +acknowledge(messageId) Mono~Void~
+        +connect() Mono~Void~
+        +disconnect() Mono~Void~
+    }
+
+    class ConnectionManager {
+        -config: ConsumerConfig
+        -messageHandler: MessageHandler
+        -rSocket: RSocket
+        +getConnection() Mono~RSocket~
+        +disconnect() Mono~Void~
+        -createConnection() Mono~RSocket~
+    }
+
+    class ConsumerRSocketImpl {
+        -messageHandler: MessageHandler
+        -consumerId: String
+        +requestStream(payload) Flux~Payload~
+        +fireAndForget(payload) Mono~Void~
+    }
+
+    class ConsumerConfig {
+        -serverHost: String
+        -serverPort: int
+        -consumerId: String
+        -groupId: String
+        +builder() Builder
+    }
+
+    class MessageHandler {
+        <<interface>>
+        +handleMessage(message) Mono~Void~
+    }
+
+    MessageConsumer <|.. DefaultMessageConsumer
+    DefaultMessageConsumer --> ConnectionManager
+    ConnectionManager --> ConsumerRSocketImpl
+    ConnectionManager --> ConsumerConfig
+    ConsumerRSocketImpl --> MessageHandler

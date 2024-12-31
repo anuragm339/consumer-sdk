@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant C as Client
+    participant MC as MessageConsumer
+    participant CM as ConnectionManager
+    participant RS as RSocketImpl
+    participant P as Provider
+
+    C->>MC: create(config)
+    MC->>CM: initialize
+    C->>MC: connect()
+    MC->>CM: getConnection()
+    CM->>RS: create
+    RS->>P: setup connection
+    P-->>RS: connection established
+    
+    C->>MC: consume()
+    MC->>RS: requestStream()
+    P-->>RS: message
+    RS->>MC: message
+    MC-->>C: message
+    
+    C->>MC: acknowledge(msgId)
+    MC->>RS: fireAndForget(ack)
+    RS->>P: acknowledgment

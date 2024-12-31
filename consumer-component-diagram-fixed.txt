@@ -1,0 +1,29 @@
+flowchart TB
+    subgraph ConsumerSDK[Consumer SDK]
+        direction TB
+        API[MessageConsumer Interface]
+        Core[DefaultMessageConsumer]
+        Factory[ConsumerFactory]
+        
+        subgraph Network["Network Layer"]
+            CM[ConnectionManager]
+            RSImpl[ConsumerRSocketImpl]
+        end
+        
+        subgraph Config["Configuration"]
+            ConsConfig[ConsumerConfig]
+            Handler[MessageHandler]
+        end
+    end
+    
+    Provider["Message Provider Service"]
+    
+    %% Connections
+    API --> Core
+    Core --> CM
+    Factory --> Core
+    Factory --> ConsConfig
+    CM --> RSImpl
+    RSImpl -.->|RSocket Protocol| Provider
+    Core --> Handler
+    RSImpl --> Handler
