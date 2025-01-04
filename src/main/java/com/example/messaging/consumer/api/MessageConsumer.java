@@ -6,24 +6,23 @@ import reactor.core.publisher.Mono;
 
 public interface MessageConsumer {
     /**
-     * Start consuming messages
+     * Connect to message provider and start consuming messages
+     * Messages will be delivered to registered MessageHandler
      */
-    Flux<Message> consume();
+    Mono<Object> connect();
 
     /**
-     * Acknowledge message processing
-     */
-    Mono<Void> acknowledge(long messageId);
-
-    /**
-     * Connect to the message server
-     */
-    Mono<Void> connect();
-
-    /**
-     * Disconnect from the message server
+     * Disconnect from message provider and stop consuming
      */
     Mono<Void> disconnect();
 
-    public ConsumerStatus getStatus();
+    /**
+     * Get current consumer status
+     */
+    ConsumerStatus getStatus();
+
+    /**
+     * Get consumer ID
+     */
+    String getConsumerId();
 }

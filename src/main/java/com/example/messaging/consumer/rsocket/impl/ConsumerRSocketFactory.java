@@ -36,7 +36,7 @@ public class ConsumerRSocketFactory {
     public MessageConsumer createConsumer(ConsumerConfig config) {
         ConnectionManager connectionManager = new ConnectionManager(config, messageHandler);
         // Create and return consumer instance
-        return new DefaultMessageConsumer(connectionManager, config.getConsumerId());
+        return new DefaultMessageConsumer(connectionManager, config.getConsumerId(),messageHandler);
     }
 
     public Mono<RSocket> createRSocket() throws JsonProcessingException {

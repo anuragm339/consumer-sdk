@@ -5,9 +5,11 @@ import com.example.messaging.models.Message;
 import com.example.messaging.models.MessageState;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.util.DefaultPayload;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -28,7 +30,9 @@ public class ConsumerRSocketImpl implements RSocket {
         this.messageHandler = messageHandler;
         this.consumerId = consumerId;
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
     }
+
 
     @Override
     public Flux<Payload> requestStream(Payload payload) {
@@ -36,21 +40,11 @@ public class ConsumerRSocketImpl implements RSocket {
             String data = payload.getDataUtf8();
             logger.info("Received stream request: {}", data);
 
-            // For consuming messages, we just need to keep the stream open
-            return Flux.<Payload>create(sink -> {
-                try {
-                    Message message = deserializeMessage(payload);
-                    messageHandler.handleMessage(message)
-                            .doOnSuccess(v -> {
-                                // Send acknowledgment after successful processing
-                                sendAcknowledgment(message.getMsgOffset())
-                                        .subscribe();
-                            })
-                            .subscribe();
-                } catch (Exception e) {
-                    sink.error(e);
-                }
-            });
+            Message message = deserializeMessage(payload);
+            return messageHandler.handleMessage(message)
+                    .then(sendAcknowledgment(message))  // Send ack after successful handling
+                    .thenReturn(DefaultPayload.create("ACK"))  // Return ack payload
+                    .flux();  // Convert to Flux
 
         } catch (Exception e) {
             logger.error("Error in requestStream: {}", e.getMessage());
@@ -61,20 +55,61 @@ public class ConsumerRSocketImpl implements RSocket {
     }
 
     @Override
-    public Mono<Void> fireAndForget(Payload payload) {
+    public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
+        return Flux.from(payloads)
+                .flatMap(payload -> {
+                    try {
+                        String data = payload.getDataUtf8();
+                        logger.info("Received requestChannel message: {}", data);
+
+                        Message message = deserializeMessage(payload);
+                        return messageHandler.handleMessage(message)
+                                .then(createAckPayload(message));  // Send ack after successful handling
+                        // Process acknowledgment
+                    } finally {
+                        payload.release();
+                    }
+                });
+    }
+
+    private Mono<Payload> createAckPayload(Message message) {
+        try {
+            Map<String, Object> ack = new HashMap<>();
+            ack.put("type", "ACK");
+            ack.put("message", message);
+            ack.put("consumerId", consumerId);
+            ack.put("timestamp", Instant.now().toEpochMilli());
+
+            String ackJson = objectMapper.writeValueAsString(ack);
+            logger.info("Creating acknowledgment for message {}: {}", message.getMsgOffset(), ackJson);
+
+            return Mono.just(DefaultPayload.create(ackJson));
+        } catch (Exception e) {
+            logger.error("Failed to create acknowledgment for message {}: {}",
+                    message.getMsgOffset(), e.getMessage());
+            return Mono.error(e);
+        }
+    }
+
+    @Override
+    public Mono<Payload> requestResponse(Payload payload) {
         try {
             String data = payload.getDataUtf8();
-            logger.info("Received fire and forget message: {}", data);
+            logger.info("Received request and response message: {}", data);
 
             Message message = deserializeMessage(payload);
-            return messageHandler.handleMessage(message);
+            return messageHandler.handleMessage(message)
+                    .then(sendAcknowledgment(message))  // Send ack after successful handling
+                    .thenReturn(DefaultPayload.create("ACK"));  // Return ack payload
+
         } catch (Exception e) {
-            logger.error("Error in fireAndForget: {}", e.getMessage());
+            logger.error("Error in requestResponse: {}", e.getMessage());
             return Mono.error(e);
         } finally {
             payload.release();
         }
     }
+
 
     private Message deserializeMessage(Payload payload) {
         try {
@@ -96,40 +131,27 @@ public class ConsumerRSocketImpl implements RSocket {
         }
     }
 
-    public Mono<Void> sendAcknowledgment(long messageId) {
+    public Mono<Void> sendAcknowledgment(Message message) {
         try {
             Map<String, Object> ack = new HashMap<>();
             ack.put("type", "ACK");
-            ack.put("messageId", messageId);
+            ack.put("message", message);
             ack.put("consumerId", consumerId);
             ack.put("timestamp", Instant.now().toEpochMilli());
 
             String ackJson = objectMapper.writeValueAsString(ack);
-            logger.info("Sending acknowledgment for message {}: {}", messageId, ackJson);
+            logger.info("Sending acknowledgment for message {}: {}", message.getMsgOffset(), ackJson);
 
-            return fireAndForget(DefaultPayload.create(ackJson));
+            return requestResponse(DefaultPayload.create(ackJson)).then();
         } catch (Exception e) {
             logger.error("Failed to send acknowledgment for message {}: {}",
-                    messageId, e.getMessage());
+                    message.getMsgOffset(), e.getMessage());
             return Mono.error(e);
         }
     }
 
-    @Override
-    public Mono<Payload> requestResponse(Payload payload) {
-        try {
-            String data = payload.getDataUtf8();
-            logger.info("Received request and response message: {}", data);
 
-            Message message = deserializeMessage(payload);
-            return messageHandler.handleFluxMessage(message);
-        } catch (Exception e) {
-            logger.error("Error in requestResponse: {}", e.getMessage());
-            return Mono.error(e);
-        } finally {
-            payload.release();
-        }
-    }
+
 
 
     @Override
