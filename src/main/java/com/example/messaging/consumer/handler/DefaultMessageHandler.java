@@ -32,7 +32,7 @@ public class DefaultMessageHandler implements MessageHandler {
     public Mono<Void> handleMessage(Message message) {
         return Mono.defer(() -> {
             try {
-                logger.info("Processing message: type={}, offset={} for consumer={}",
+                logger.debug("Processing message: type={}, offset={} for consumer={}",
                         message.getType(), message.getMsgOffset(), consumerId);
 
                 Consumer<Message> handler = messageTypeHandlers.getOrDefault(
@@ -41,7 +41,7 @@ public class DefaultMessageHandler implements MessageHandler {
                 );
 
                 handler.accept(message);
-                logger.info("Successfully processed message: offset={}", message.getMsgOffset());
+                logger.debug("Successfully processed message: offset={}", message.getMsgOffset());
 
                 return Mono.empty();
             } catch (Exception e) {

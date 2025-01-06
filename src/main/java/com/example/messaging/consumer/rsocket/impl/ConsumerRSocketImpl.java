@@ -60,7 +60,7 @@ public class ConsumerRSocketImpl implements RSocket {
                 .flatMap(payload -> {
                     try {
                         String data = payload.getDataUtf8();
-                        logger.info("Received requestChannel message: {}", data);
+                        logger.debug("Received requestChannel message: {}", data);
 
                         Message message = deserializeMessage(payload);
                         return messageHandler.handleMessage(message)
@@ -81,7 +81,7 @@ public class ConsumerRSocketImpl implements RSocket {
             ack.put("timestamp", Instant.now().toEpochMilli());
 
             String ackJson = objectMapper.writeValueAsString(ack);
-            logger.info("Creating acknowledgment for message {}: {}", message.getMsgOffset(), ackJson);
+            logger.debug("Creating acknowledgment for message {}: {}", message.getMsgOffset(), ackJson);
 
             return Mono.just(DefaultPayload.create(ackJson));
         } catch (Exception e) {
@@ -156,6 +156,6 @@ public class ConsumerRSocketImpl implements RSocket {
 
     @Override
     public void dispose() {
-        logger.info("Disposing RSocket connection for consumer: {}", consumerId);
+        logger.debug("Disposing RSocket connection for consumer: {}", consumerId);
     }
 }

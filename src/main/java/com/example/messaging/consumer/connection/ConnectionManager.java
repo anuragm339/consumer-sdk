@@ -4,6 +4,7 @@ import com.example.messaging.consumer.core.ConsumerConfig;
 import com.example.messaging.consumer.handler.MessageHandler;
 import com.example.messaging.consumer.rsocket.impl.ConsumerRSocketFactory;
 import com.example.messaging.consumer.rsocket.impl.ConsumerRSocketImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.rsocket.RSocket;
 import io.rsocket.core.RSocketConnector;
@@ -50,30 +51,30 @@ public class ConnectionManager {
 
     private Mono<RSocket> createConnection() {
         return Mono.defer(() -> {
-            ConsumerRSocketFactory rSocketFactory = new ConsumerRSocketFactory(messageHandler, config,new ObjectMapper());
+            ConsumerRSocketFactory rSocketFactory = new ConsumerRSocketFactory(messageHandler, config, new ObjectMapper());
 
-            return Mono.fromCallable(() -> {
-                try {
-                    return rSocketFactory.createRSocket().block();
-                } catch (Exception e) {
-                    logger.error("Failed to create RSocket: {}", e.getMessage());
-                    throw e;
-                }
-            }).doOnNext(socket -> {
-                this.rSocket = socket;
-                logger.info("Created new RSocket connection for consumer: {}", config.getConsumerId());
+            try {
+                return rSocketFactory.createRSocket()
+                        .doOnNext(socket -> {
+                            this.rSocket = socket;
+                            logger.info("Created new RSocket connection for consumer: {}", config.getConsumerId());
 
-                // Setup connection lost handler
-                socket.onClose()
-                        .doFinally(signalType -> {
-                            logger.info("Connection closed. Signal: {}", signalType);
-                            this.rSocket = null;
+                            // Setup connection lost handler
+                            socket.onClose()
+                                    .doFinally(signalType -> {
+                                        logger.debug("Connection closed. Signal: {}", signalType);
+                                        this.rSocket = null;
+                                    })
+                                    .subscribe();
                         })
-                        .subscribe();
-            });
+                        .doOnError(error ->
+                                logger.error("Failed to create RSocket: {}", error.getMessage())
+                        );
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
         });
     }
-
     public Mono<Void> disconnect() {
         return Mono.defer(() -> {
             if (rSocket != null) {
