@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    id 'java-library'  // Added for better dependency management
+    id 'maven-publish'  // Added for publishing the SDK
 }
 
 group = 'com.example.messaging'
@@ -7,19 +9,65 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
-    implementation 'io.rsocket:rsocket-core:1.1.3'
-    implementation 'io.rsocket:rsocket-transport-netty:1.1.3'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
-    implementation files('/Users/anuragmishra/Desktop/workspace/messaging/aqueduct-common/build/libs/aqueduct-common-1.0.0-SNAPSHOT.jar')
+    // Add annotation processing
+    annotationProcessor 'io.micronaut:micronaut-inject-java:4.2.0'
 
+    // Configuration properties support
+    implementation 'io.micronaut:micronaut-core:4.2.0'
+    implementation 'io.micronaut:micronaut-context:4.2.0'
+    implementation 'io.micronaut:micronaut-aop:4.2.0'
+
+    // For YAML support
+    implementation 'org.yaml:snakeyaml:2.0'
+    // Existing dependencies
+    implementation('io.rsocket:rsocket-core:1.1.3')
+    implementation('io.rsocket:rsocket-transport-netty:1.1.3')
+    implementation('com.fasterxml.jackson.core:jackson-databind:2.15.2')
+    implementation('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2')
+
+    // Added dependencies for annotation processing
+    implementation('io.micronaut:micronaut-inject:4.2.0')
+    implementation('jakarta.inject:jakarta.inject-api:2.0.1')
+
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.9'
+
+    // Reactor
+    implementation('io.projectreactor:reactor-core:3.5.11')
+
+    // Your common library
+    implementation 'com.example.messaging:aqueduct-common:1.0.0-SNAPSHOT'
+
+    // Test dependencies
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+    testImplementation 'org.mockito:mockito-core:5.4.0'
+    testImplementation 'io.projectreactor:reactor-test:3.5.11'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+    withJavadocJar()
 }
 
 test {
     useJUnitPlatform()
+}
+
+// Added publishing configuration
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+tasks.withType(Javadoc).configureEach {
+    failOnError = false
 }
